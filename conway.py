@@ -21,30 +21,41 @@ for i in range(1, board_size-1):
 previous_board = [line.copy() for line in current_board]
 
 
-epoch = 0
 # Fonction d'affichage en console du plateau
 def print_board(b):
-    global board_size, epoch
+    global board_size
     cell_to_str = lambda cell: 'O' if cell else '-'
-
-    time.sleep(0.5)
-    os.system("clear")
-    print(epoch)
 
     for i in range(1, board_size-1):
         print(end='\n')
         for j in range(1, board_size-1):
             print(cell_to_str(b[i][j])+' ', end='')
     print(end='\n')
+
+
+epoch = 0
+diff = 0
+
+# Fonction appelée par un seul thread lorsque la première barrière
+# est sur le point d'être passée
+def callback_barrier_current_board():
+    global current_board, epoch, diff
+    diff = 0 # Pas besoin de lock car appel de la fonction synchrone
     epoch += 1
 
+    time.sleep(0.25)
+    os.system("clear")
+    print(epoch)
+    print_board(current_board)
 
-barrier_current_board = threading.Barrier(n * n, action=lambda: print_board(current_board))
+
+barrier_current_board = threading.Barrier(n * n, action=callback_barrier_current_board)
 barrier_previous_board = threading.Barrier(n * n)
+lock_diff = threading.Lock()
 
 # Fonction de mise à jour du plateau
 def update_board(cb, pb, i, j):
-    global barrier_current_board, barrier_previous_board
+    global barrier_current_board, barrier_previous_board, diff
     while True:
         # Mise à jour du plateau principal sans modifier la vue
         neighbors = (
@@ -59,10 +70,17 @@ def update_board(cb, pb, i, j):
         # On attend que tous les threads modifient le plateau principal
         barrier_current_board.wait()
 
+        # Est-ce que la case (i, j) a changé ?
+        lock_diff.acquire()
+        diff += (pb[i][j] != cb[i][j])
+        lock_diff.release()
         # Modification du plateau précédent
         pb[i][j] = cb[i][j]
         # On attend que tous les threads modifient le plateau précédent
         barrier_previous_board.wait()
+
+        # Si aucune modification par rapport à l'époque précédente alors on arrête
+        if diff == 0: break
 
 
 threads = [threading.Thread(target=update_board, args=(current_board, previous_board, i, j))
