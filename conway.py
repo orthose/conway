@@ -10,7 +10,6 @@ n = int(sys.argv[1])
 assert 0 < n
 
 window = tk.Tk()
-
 window_size = min(window.winfo_screenwidth(), window.winfo_screenheight())
 window.geometry(f"{window_size}x{window_size}")
 window.configure(bg="white")
@@ -28,7 +27,7 @@ for i in range(1, board_size-1):
     for j in range(1, board_size-1):
         current_board[i][j] = random.choice([True, False])
         label = tk.Label(frame,
-            bg=("black" if current_board[i][j] else "white"),
+            bg=("black" if current_board[i][j] else "white")
             )
         label.grid(row=i-1, column=j-1, sticky="nsew")
         labels[i-1][j-1] = label
@@ -109,5 +108,15 @@ threads = [threading.Thread(target=update_board, args=(current_board, previous_b
     for i in range(1, board_size-1) for j in range(1, board_size-1)]
 
 print_board(current_board)
-for t in threads: t.start()
+
+def start_threads():
+    global threads, menubar
+    for t in threads: t.start()
+    menubar.entryconfig("Démarrer", state="disabled")
+
+menubar = tk.Menu(window)
+menubar.add_command(label="Démarrer", command=start_threads)
+menubar.add_command(label="Quitter", command=lambda: exit(0))
+window.config(menu=menubar)
+
 window.mainloop()
