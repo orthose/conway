@@ -3,19 +3,40 @@ import os
 import time
 import random
 import threading
+import tkinter as tk
 
 # Nombre de cases du tableau
 n = int(sys.argv[1])
 assert 0 < n
 
+window = tk.Tk()
+
+window_size = min(window.winfo_screenwidth(), window.winfo_screenheight())
+window.geometry(f"{window_size}x{window_size}")
+window.configure(bg="white")
+
+frame = tk.Frame(window)
+frame.pack(fill="both", expand=True)
+
 # Plateau principal de (n + 2) * (n + 2) cases pour ne pas gérer les bordures
 board_size = n + 2
 current_board = [[False] * board_size for _ in range(board_size)]
+labels = [[None] * n for _ in range(n)]
 
 # Initialisation aléatoire du plateau
 for i in range(1, board_size-1):
     for j in range(1, board_size-1):
         current_board[i][j] = random.choice([True, False])
+        label = tk.Label(frame,
+            bg=("black" if current_board[i][j] else "white"),
+            )
+        label.grid(row=i-1, column=j-1, sticky="nsew")
+        labels[i-1][j-1] = label
+
+for i in range(n):
+    frame.rowconfigure(i, weight=1)
+    frame.columnconfigure(i, weight=1)
+
 
 # Vue du plateau principal utilisée pour sa modification
 previous_board = [line.copy() for line in current_board]
@@ -30,6 +51,7 @@ def print_board(b):
         print(end='\n')
         for j in range(1, board_size-1):
             print(cell_to_str(b[i][j])+' ', end='')
+            labels[i-1][j-1].config(bg=("black" if current_board[i][j] else "white"))
     print(end='\n')
 
 
@@ -43,7 +65,7 @@ def callback_barrier_current_board():
     diff = 0 # Pas besoin de lock car appel de la fonction synchrone
     epoch += 1
 
-    time.sleep(0.25)
+    time.sleep(0.10)
     os.system("clear")
     print(epoch)
     print_board(current_board)
@@ -88,3 +110,4 @@ threads = [threading.Thread(target=update_board, args=(current_board, previous_b
 
 print_board(current_board)
 for t in threads: t.start()
+window.mainloop()
