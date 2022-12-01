@@ -2,6 +2,7 @@ import sys
 import os
 import time
 import random
+import threading
 
 # Nombre de cases du tableau
 n = int(sys.argv[1])
@@ -21,24 +22,18 @@ board_view = [line.copy() for line in board]
 
 
 # Fonction de mise à jour du plateau
-def update_board(b, v):
+def update_board(b, v, i, j):
     global board_size
     # Mise à jour du plateau principal sans modifier la vue
-    for i in range(1, board_size-1):
-        for j in range(1, board_size-1):
-            neighbors = (
-                  v[i-1][j-1] + v[i-1][j] + v[i-1][j+1]
-                + v[ i ][j-1]             + v[ i ][j+1]
-                + v[i+1][j-1] + v[i+1][j] + v[i+1][j+1]
-            )
-            b[i][j] = (
-                (not b[i][j] and neighbors == 3)
-                or (b[i][j] and neighbors in [2, 3])
-            )
-    # Mise à jour de la vue
-    for i in range(1, board_size-1):
-        for j in range(1, board_size-1):
-            v[i][j] = b[i][j]
+    neighbors = (
+          v[i-1][j-1] + v[i-1][j] + v[i-1][j+1]
+        + v[ i ][j-1]             + v[ i ][j+1]
+        + v[i+1][j-1] + v[i+1][j] + v[i+1][j+1]
+    )
+    b[i][j] = (
+        (not b[i][j] and neighbors == 3)
+        or (b[i][j] and neighbors in [2, 3])
+    )
 
 
 # Fonction d'affichage en console du plateau
@@ -60,4 +55,14 @@ while True:
     print(epoch)
     print_board(board)
     epoch += 1
-    update_board(board, board_view)
+
+    threads = [threading.Thread(target=update_board, args=(board, board_view, i, j))
+        for i in range(1, board_size-1) for j in range(1, board_size-1)]
+
+    for t in threads: t.start()
+    for t in threads: t.join()
+
+    # Mise à jour de la vue
+    for i in range(1, board_size-1):
+        for j in range(1, board_size-1):
+            board_view[i][j] = board[i][j]
